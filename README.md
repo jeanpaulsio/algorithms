@@ -28,8 +28,6 @@ yarn install
 yarn build:css
 ```
 
-**Note:** Poetry manages its own virtual environment automatically. The `Procfile.dev` uses `poetry run`, so you don't need to activate the environment manually.
-
 ### Running the Application
 
 **Using Overmind:**
@@ -54,8 +52,4 @@ poetry add --group dev package-name
 **Update dependencies:**
 ```bash
 poetry update
-```
-
-```bash
-poetry export -f requirements.txt --output requirements.txt --without-hashes
 ```
