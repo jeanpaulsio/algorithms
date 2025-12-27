@@ -20,6 +20,11 @@ if config.config_file_name is not None:
 
 # Get database URL from environment
 database_url = os.getenv("DATABASE_URL", "postgresql://localhost/algorithms")
+
+# Normalize postgres:// to postgresql:// for SQLAlchemy 2.0
+if database_url.startswith("postgres://"):
+    database_url = database_url.replace("postgres://", "postgresql://", 1)
+
 config.set_main_option("sqlalchemy.url", database_url)
 
 # add your model's MetaData object here
