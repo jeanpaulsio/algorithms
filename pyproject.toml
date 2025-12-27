@@ -1,0 +1,33 @@
+[project]
+name = "algorithms"
+version = "0.1.0"
+description = "LeetCode-style algorithm practice application"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "jinja2>=3.1.4",
+    "ruff>=0.8.0",
+]
+
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.ruff]
+line-length = 120
+exclude = [".venv", "__pycache__"]
+
+[tool.ruff.lint]
+ignore = ["E203", "E501"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.pyright]
+include = ["app"]
+exclude = ["test", ".venv", "__pycache__"]
+pythonVersion = "3.13"
+typeCheckingMode = "basic"
+venvPath = "."
+venv = ".venv"
