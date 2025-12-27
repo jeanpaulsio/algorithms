@@ -55,7 +55,3 @@ poetry add --group dev package-name
 ```bash
 poetry update
 ```
-
-```bash
-poetry export -f requirements.txt --output requirements.txt --without-hashes
-```
