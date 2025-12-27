@@ -8,25 +8,33 @@ An algorithm practice application built with FastAPI.
 
 - Python 3.13.3 (managed via `.tool-versions` if using asdf)
 - Poetry
+- Poetry
 - Node.js and yarn (for Tailwind CSS)
 
 ### Setup
 
 1. Install Poetry (if not already installed):
+1. Install Poetry (if not already installed):
 ```bash
+curl -sSL https://install.python-poetry.org | python3 -
 curl -sSL https://install.python-poetry.org | python3 -
 ```
 
 2. Install Python dependencies:
+2. Install Python dependencies:
 ```bash
+poetry install
 poetry install
 ```
 
+3. Install Node.js dependencies and build Tailwind CSS:
 3. Install Node.js dependencies and build Tailwind CSS:
 ```bash
 yarn install
 yarn build:css
 ```
+
+**Note:** Poetry manages its own virtual environment automatically. The `Procfile.dev` uses `poetry run`, so you don't need to activate the environment manually.
 
 **Note:** Poetry manages its own virtual environment automatically. The `Procfile.dev` uses `poetry run`, so you don't need to activate the environment manually.
 
