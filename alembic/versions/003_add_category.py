@@ -26,4 +26,3 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.drop_index(op.f("ix_problems_category"), table_name="problems")
     op.drop_column("problems", "category")
-
