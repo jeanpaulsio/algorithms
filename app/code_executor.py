@@ -472,8 +472,15 @@ else:
                 if key.startswith("LD_") or key.startswith("DYLD_"):
                     del env[key]
 
+            # Use a reliable Python executable path
+            # On Heroku, sys.executable might point to a non-existent path
+            # Use 'python3' from PATH which is more reliable on Heroku
+            import shutil
+
+            python_executable = shutil.which("python3") or "python3"
+
             result = subprocess.run(
-                [sys.executable, str(test_runner)],
+                [python_executable, str(test_runner)],
                 capture_output=True,
                 text=True,
                 timeout=timeout,
