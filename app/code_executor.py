@@ -540,8 +540,6 @@ else:
             
             # If we found a total count but don't have that many results, some tests might not have run
             if total_tests > 0 and len(test_results) < total_tests:
-                # Find missing tests by checking what was discovered but not executed
-                executed_tests = {r["name"] for r in test_results}
                 # We can't know which tests weren't executed without more info, so we'll just note it
                 pass
             
