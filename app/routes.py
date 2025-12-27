@@ -75,7 +75,7 @@ async def run_code(
     # Execute code securely
     result = execute_code_secure(
         user_code=submission.code,
-        test_code=problem.test_code,
+        test_code=str(problem.test_code),
         module_path=problem.module_path,
         timeout=5,
     )
