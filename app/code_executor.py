@@ -215,7 +215,7 @@ class SecureImportTransformer(ast.NodeTransformer):
                     if node.attr in DANGEROUS_BUILTINS:
                         raise ValueError(f"Indirect access to dangerous builtin '{node.attr}' is not allowed")
         return self.generic_visit(node)
-    
+
     def visit_Subscript(self, node: ast.Subscript) -> ast.AST:
         # Block vars(__builtins__)['eval'] and globals()['__builtins__'] patterns
         if isinstance(node.value, ast.Call):
@@ -248,11 +248,7 @@ def validate_code(code: str) -> tuple[bool, str | None]:
         return False, f"Validation error: {str(e)}"
 
 
-
-
-def execute_code_secure(
-    user_code: str, test_code: str, module_path: str, timeout: int = 5
-) -> dict[str, Any]:
+def execute_code_secure(user_code: str, test_code: str, module_path: str, timeout: int = 5) -> dict[str, Any]:
     """
     Execute user code and run tests in a secure subprocess.
 
@@ -303,10 +299,10 @@ def execute_code_secure(
             else:
                 indented_lines.append(line)
         indented_test_code = "\n".join(indented_lines)
-        
+
         # Store test code source for parsing
         test_code_source = test_code
-        
+
         test_runner_content = f"""import sys
 from pathlib import Path
 import ast as ast_module
@@ -464,16 +460,18 @@ else:
         try:
             # Create minimal environment
             env = os.environ.copy()
-            env.update({
-                "PYTHONPATH": str(tmp_path),
-                "PYTHONUNBUFFERED": "1",
-                "PYTHONDONTWRITEBYTECODE": "1",  # Don't write .pyc files
-            })
+            env.update(
+                {
+                    "PYTHONPATH": str(tmp_path),
+                    "PYTHONUNBUFFERED": "1",
+                    "PYTHONDONTWRITEBYTECODE": "1",  # Don't write .pyc files
+                }
+            )
             # Remove potentially dangerous environment variables
             for key in list(env.keys()):
                 if key.startswith("LD_") or key.startswith("DYLD_"):
                     del env[key]
-            
+
             result = subprocess.run(
                 [sys.executable, str(test_runner)],
                 capture_output=True,
@@ -493,13 +491,14 @@ else:
             passed_tests = []
             failed_tests = []
             total_tests = 0
-            
+
             # Parse individual test results
             for line in output.split("\n"):
                 line = line.strip()
                 if line.startswith("Found"):
                     # Extract total test count: "Found 6 test(s)"
                     import re
+
                     match = re.search(r"Found (\d+) test", line)
                     if match:
                         total_tests = int(match.group(1))
@@ -537,12 +536,12 @@ else:
                     error_msg = error_msg.split("\n")[0].split("Traceback")[0].strip()
                     failed_tests.append(test_name)
                     test_results.append({"name": test_name, "passed": False, "error": error_msg})
-            
+
             # If we found a total count but don't have that many results, some tests might not have run
             if total_tests > 0 and len(test_results) < total_tests:
                 # We can't know which tests weren't executed without more info, so we'll just note it
                 pass
-            
+
             # If no individual test results parsed, check for overall status
             if not test_results:
                 if "SUCCESS" in output:
@@ -568,7 +567,9 @@ else:
             return {
                 "success": False,
                 "error": f"Execution timed out after {timeout} seconds",
-                "test_results": [{"name": "Execution", "passed": False, "error": f"Execution timed out after {timeout} seconds"}],
+                "test_results": [
+                    {"name": "Execution", "passed": False, "error": f"Execution timed out after {timeout} seconds"}
+                ],
                 "output": "",
                 "passed_count": 0,
                 "failed_count": 1,
@@ -582,4 +583,3 @@ else:
                 "passed_count": 0,
                 "failed_count": 1,
             }
-

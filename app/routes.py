@@ -64,7 +64,12 @@ async def run_code(
     if len(submission.code) > 10000:
         return JSONResponse(
             status_code=400,
-            content={"success": False, "error": "Code is too long (max 10000 characters)", "test_results": [], "output": ""},
+            content={
+                "success": False,
+                "error": "Code is too long (max 10000 characters)",
+                "test_results": [],
+                "output": "",
+            },
         )
 
     # Execute code securely
