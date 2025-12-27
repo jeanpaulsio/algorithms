@@ -14,16 +14,12 @@ An algorithm practice application built with FastAPI.
 ### Setup
 
 1. Install Poetry (if not already installed):
-1. Install Poetry (if not already installed):
 ```bash
-curl -sSL https://install.python-poetry.org | python3 -
 curl -sSL https://install.python-poetry.org | python3 -
 ```
 
 2. Install Python dependencies:
-2. Install Python dependencies:
 ```bash
-poetry install
 poetry install
 ```
 
@@ -33,10 +29,6 @@ poetry install
 yarn install
 yarn build:css
 ```
-
-**Note:** Poetry manages its own virtual environment automatically. The `Procfile.dev` uses `poetry run`, so you don't need to activate the environment manually.
-
-**Note:** Poetry manages its own virtual environment automatically. The `Procfile.dev` uses `poetry run`, so you don't need to activate the environment manually.
 
 ### Running the Application
 

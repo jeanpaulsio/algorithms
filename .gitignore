@@ -50,6 +50,3 @@ yarn-error.log
 
 # Built CSS (generated automatically on Heroku)
 app/static/dist/output.css
-
-# requirements.txt (generated from Poetry for Heroku, but we use Poetry buildpack)
-requirements.txt
