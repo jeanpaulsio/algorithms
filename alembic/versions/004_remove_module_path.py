@@ -10,6 +10,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy import inspect
 
 # revision identifiers, used by Alembic.
 revision: str = "004"
@@ -19,7 +20,13 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.drop_column("problems", "module_path")
+    # Check if column exists before dropping
+    conn = op.get_bind()
+    inspector = inspect(conn)
+    columns = [col["name"] for col in inspector.get_columns("problems")]
+    
+    if "module_path" in columns:
+        op.drop_column("problems", "module_path")
 
 
 def downgrade() -> None:
