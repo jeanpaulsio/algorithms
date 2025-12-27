@@ -1,0 +1,39 @@
+import uuid
+from pathlib import Path
+
+from fastapi import APIRouter, Depends, Request
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+
+from app.database import get_db
+from app.models import Problem
+
+template_dir = Path(__file__).parent / "templates"
+templates = Jinja2Templates(directory=str(template_dir))
+
+router = APIRouter()
+
+
+@router.get("/", response_class=HTMLResponse)
+async def problem_list(
+    request: Request,
+    category: str | None = None,
+    db: AsyncSession = Depends(get_db),
+) -> HTMLResponse:
+    query = select(Problem)
+    if category:
+        query = query.where(Problem.category == category)
+    result = await db.execute(query)
+    problems = result.scalars().all()
+    return templates.TemplateResponse("problems/list.html", {"request": request, "problems": problems})
+
+
+@router.get("/problems/{problem_id}", response_class=HTMLResponse)
+async def problem_detail(problem_id: uuid.UUID, request: Request, db: AsyncSession = Depends(get_db)) -> HTMLResponse:
+    result = await db.execute(select(Problem).where(Problem.id == problem_id))
+    problem = result.scalar_one_or_none()
+    if not problem:
+        return templates.TemplateResponse("problems/404.html", {"request": request}, status_code=404)
+    return templates.TemplateResponse("problems/detail.html", {"request": request, "problem": problem})
