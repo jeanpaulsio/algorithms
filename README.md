@@ -8,7 +8,6 @@ An algorithm practice application built with FastAPI.
 
 - Python 3.13.3 (managed via `.tool-versions` if using asdf)
 - Poetry
-- Poetry
 - Node.js and yarn (for Tailwind CSS)
 
 ### Setup
@@ -23,7 +22,6 @@ curl -sSL https://install.python-poetry.org | python3 -
 poetry install
 ```
 
-3. Install Node.js dependencies and build Tailwind CSS:
 3. Install Node.js dependencies and build Tailwind CSS:
 ```bash
 yarn install
