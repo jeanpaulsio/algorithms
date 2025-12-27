@@ -8,6 +8,7 @@ An algorithm practice application built with FastAPI.
 
 - Python 3.13.3 (managed via `.tool-versions` if using asdf)
 - pip
+- Node.js and yarn (for Tailwind CSS)
 
 ### Setup
 
@@ -21,16 +22,22 @@ python -m venv .venv
 source .venv/bin/activate
 ```
 
-3. Install dependencies:
+3. Install Python dependencies:
 ```bash
 pip install -r requirements.txt
 ```
 
+4. Install Node.js dependencies and build Tailwind CSS:
+```bash
+yarn install
+yarn build:css
+```
+
 ### Running the Application
 
-Start the development server:
+**Using Overmind:**
 ```bash
-uvicorn app.main:app --reload
+overmind start -f Procfile.dev
 ```
 
 The application will be available at `http://localhost:8000`
