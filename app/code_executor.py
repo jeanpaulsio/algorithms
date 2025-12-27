@@ -180,6 +180,25 @@ class SecureImportTransformer(ast.NodeTransformer):
             if isinstance(node.func.value, ast.Name) and node.func.value.id == "__builtins__":
                 if node.func.attr in DANGEROUS_BUILTINS:
                     raise ValueError(f"Access to __builtins__.{node.func.attr} is not allowed")
+            # Block getattr(__builtins__, ...) calls
+            if isinstance(node.func, ast.Attribute) and node.func.attr == "getattr":
+                if isinstance(node.func.value, ast.Name) and node.func.value.id == "__builtins__":
+                    raise ValueError("getattr on __builtins__ is not allowed")
+        # Block getattr(__builtins__, ...) pattern
+        if isinstance(node.func, ast.Name) and node.func.id == "getattr":
+            if len(node.args) >= 1:
+                if isinstance(node.args[0], ast.Name) and node.args[0].id == "__builtins__":
+                    raise ValueError("getattr on __builtins__ is not allowed")
+        # Block vars(__builtins__) pattern
+        if isinstance(node.func, ast.Name) and node.func.id == "vars":
+            if len(node.args) >= 1:
+                if isinstance(node.args[0], ast.Name) and node.args[0].id == "__builtins__":
+                    raise ValueError("vars on __builtins__ is not allowed")
+        # Block globals()['__builtins__'] pattern - check if result is used to access dangerous builtins
+        if isinstance(node.func, ast.Name) and node.func.id == "globals":
+            # This is tricky - we can't easily detect if the result is used maliciously
+            # But we can at least warn or block it in certain contexts
+            pass  # Handled at runtime by blocking __builtins__ access
         return self.generic_visit(node)
 
     def visit_Attribute(self, node: ast.Attribute) -> ast.AST:
@@ -188,6 +207,29 @@ class SecureImportTransformer(ast.NodeTransformer):
         if isinstance(node.value, ast.Name) and node.value.id == "__builtins__":
             if node.attr in DANGEROUS_BUILTINS:
                 raise ValueError(f"Access to __builtins__.{node.attr} is not allowed")
+        # Block getattr/vars/globals results accessing __builtins__
+        if isinstance(node.value, ast.Call):
+            if isinstance(node.value.func, ast.Name):
+                if node.value.func.id in ("getattr", "vars", "globals"):
+                    # If accessing __builtins__ through the result
+                    if node.attr in DANGEROUS_BUILTINS:
+                        raise ValueError(f"Indirect access to dangerous builtin '{node.attr}' is not allowed")
+        return self.generic_visit(node)
+    
+    def visit_Subscript(self, node: ast.Subscript) -> ast.AST:
+        # Block vars(__builtins__)['eval'] and globals()['__builtins__'] patterns
+        if isinstance(node.value, ast.Call):
+            if isinstance(node.value.func, ast.Name):
+                if node.value.func.id in ("vars", "globals"):
+                    # Check if accessing __builtins__ or dangerous builtins
+                    if isinstance(node.slice, ast.Constant):
+                        key = node.slice.value
+                        if key == "__builtins__" or key in DANGEROUS_BUILTINS:
+                            raise ValueError(f"Access to '{key}' via {node.value.func.id} is not allowed")
+                    elif isinstance(node.slice, ast.Str):  # Python < 3.8
+                        key = node.slice.s
+                        if key == "__builtins__" or key in DANGEROUS_BUILTINS:
+                            raise ValueError(f"Access to '{key}' via {node.value.func.id} is not allowed")
         return self.generic_visit(node)
 
 
