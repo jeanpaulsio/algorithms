@@ -9,6 +9,7 @@ An algorithm practice application built with FastAPI.
 - Python 3.13.3 (managed via `.tool-versions` if using asdf)
 - Poetry
 - Node.js and yarn (for Tailwind CSS)
+- PostgreSQL (for local database)
 
 ### Setup
 
@@ -26,6 +27,24 @@ poetry install
 ```bash
 yarn install
 yarn build:css
+```
+
+4. Set up the database:
+```bash
+# Create the database (PostgreSQL must be running)
+createdb algorithms
+
+# Or if you prefer a different name, set DATABASE_URL:
+# export DATABASE_URL="postgresql+asyncpg://localhost/your_db_name"
+
+# Run migrations to create tables
+poetry run alembic upgrade head
+
+# Seed initial data
+poetry run python -m app.seed
+
+# To reseed (clear and re-add):
+poetry run python -m app.seed --clear
 ```
 
 ### Running the Application

@@ -1,9 +1,11 @@
 from pathlib import Path
 
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+
+from app.routes import router
 
 app = FastAPI(title="Algorithms Practice")
 
@@ -15,10 +17,7 @@ templates = Jinja2Templates(directory=str(template_dir))
 static_dir = Path(__file__).parent / "static"
 app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
-
-@app.get("/", response_class=HTMLResponse)
-async def index(request: Request) -> HTMLResponse:
-    return templates.TemplateResponse("index.html", {"request": request})
+app.include_router(router)
 
 
 @app.get("/health")
