@@ -124,24 +124,62 @@
         const testCode = testCodeDiv.textContent || testCodeDiv.innerText || "";
         const codeEditorTextarea = document.getElementById("code-editor");
         
-        // Parse test function names from test code
+        // Parse test function names and extract test details from test code
         function parseTestFunctions(testCode) {
             const testFunctions = [];
+            const testDetails = {};
             const lines = testCode.split('\n');
+            let currentTest = null;
+            let inTestFunction = false;
+            let indentLevel = 0;
+            
             for (let i = 0; i < lines.length; i++) {
-                const line = lines[i].trim();
-                if (line.startsWith('def test_')) {
-                    const match = line.match(/def (test_\w+)/);
+                const line = lines[i];
+                const trimmed = line.trim();
+                
+                // Detect test function start
+                if (trimmed.startsWith('def test_')) {
+                    const match = trimmed.match(/def (test_\w+)/);
                     if (match) {
-                        testFunctions.push(match[1]);
+                        currentTest = match[1];
+                        testFunctions.push(currentTest);
+                        inTestFunction = true;
+                        indentLevel = line.match(/^(\s*)/)[1].length;
+                        testDetails[currentTest] = { inputs: [], expected: null, code: [] };
+                    }
+                } else if (inTestFunction && currentTest) {
+                    const currentIndent = line.match(/^(\s*)/)[1].length;
+                    
+                    // Check if we've left the function
+                    if (trimmed && currentIndent <= indentLevel && !trimmed.startsWith('#')) {
+                        inTestFunction = false;
+                        currentTest = null;
+                    } else if (inTestFunction) {
+                        testDetails[currentTest].code.push(line);
+                        
+                        // Try to extract assertion details
+                        if (trimmed.startsWith('assert')) {
+                            // Match patterns like: assert function_name(args) == expected
+                            const assertMatch = trimmed.match(/assert\s+(\w+)\((.*?)\)\s*==\s*(.+)/);
+                            if (assertMatch) {
+                                const [, funcName, argsStr, expectedStr] = assertMatch;
+                                // Parse arguments (simple parsing for common cases)
+                                const args = argsStr.split(',').map(a => a.trim()).filter(a => a);
+                                testDetails[currentTest].inputs = args;
+                                testDetails[currentTest].expected = expectedStr.trim();
+                            }
+                        }
                     }
                 }
             }
-            return testFunctions.sort();
+            
+            return { functions: testFunctions.sort(), details: testDetails };
         }
         
         // Initialize test cases display
-        const allTestCases = parseTestFunctions(testCode);
+        const testInfo = parseTestFunctions(testCode);
+        const allTestCases = testInfo.functions;
+        const testDetails = testInfo.details;
         let testStatuses = {};
         
         function renderTestCases(testStatuses = {}) {
@@ -149,7 +187,15 @@
             const resultsHtml = sortedTests.map(testName => {
                 const status = testStatuses[testName];
                 if (status === undefined) {
-                    // Pending
+                    // Pending - show input if available
+                    const details = testDetails[testName] || {};
+                    const hasDetails = details.inputs && details.inputs.length > 0;
+                    const detailsHtml = hasDetails ? `
+                        <div class="mt-1 text-xs text-slate-500">
+                            Input: <span class="font-mono">${escapeHtml(details.inputs.join(', '))}</span>
+                        </div>
+                    ` : '';
+                    
                     return `
                         <div class="flex items-start py-2 border-b border-slate-200 last:border-b-0">
                             <svg class="h-5 w-5 text-slate-400 mr-3 flex-shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
@@ -157,11 +203,20 @@
                             </svg>
                             <div class="flex-1">
                                 <div class="text-sm font-medium text-slate-500">${escapeHtml(testName)}</div>
+                                ${detailsHtml}
                             </div>
                         </div>
                     `;
                 } else if (status.passed) {
-                    // Passed
+                    // Passed - show input if available
+                    const details = testDetails[testName] || {};
+                    const hasDetails = details.inputs && details.inputs.length > 0;
+                    const detailsHtml = hasDetails ? `
+                        <div class="mt-1 text-xs text-slate-600">
+                            Input: <span class="font-mono">${escapeHtml(details.inputs.join(', '))}</span>
+                        </div>
+                    ` : '';
+                    
                     return `
                         <div class="flex items-start py-2 border-b border-slate-200 last:border-b-0">
                             <svg class="h-5 w-5 text-green-500 mr-3 flex-shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
@@ -169,19 +224,57 @@
                             </svg>
                             <div class="flex-1">
                                 <div class="text-sm font-medium text-slate-900">${escapeHtml(testName)}</div>
+                                ${detailsHtml}
                             </div>
                         </div>
                     `;
                 } else {
-                    // Failed
+                    // Failed - show inputs, expected, and actual output if available
+                    const details = testDetails[testName] || {};
+                    const hasDetails = details.inputs && details.inputs.length > 0;
+                    const actualValue = status.actual || null;
+                    const expectedValue = details.expected || null;
+                    
+                    let detailsHtml = '';
+                    if (hasDetails || expectedValue || actualValue) {
+                        detailsHtml = `
+                            <div class="mt-2 space-y-2 text-xs">
+                                ${hasDetails ? `
+                                <div>
+                                    <div class="text-slate-500 mb-1">Input:</div>
+                                    <div class="font-mono bg-slate-50 px-2 py-1 rounded border border-slate-200 text-slate-800 break-words">
+                                        ${escapeHtml(details.inputs.join(', '))}
+                                    </div>
+                                </div>
+                                ` : ''}
+                                ${expectedValue ? `
+                                <div>
+                                    <div class="text-slate-500 mb-1">Expected:</div>
+                                    <div class="font-mono bg-green-50 px-2 py-1 rounded border border-green-200 text-green-800 break-words">
+                                        ${escapeHtml(expectedValue)}
+                                    </div>
+                                </div>
+                                ` : ''}
+                                ${actualValue ? `
+                                <div>
+                                    <div class="text-slate-500 mb-1">Got:</div>
+                                    <div class="font-mono bg-red-50 px-2 py-1 rounded border border-red-200 text-red-800 break-words">
+                                        ${escapeHtml(actualValue)}
+                                    </div>
+                                </div>
+                                ` : ''}
+                            </div>
+                        `;
+                    }
+                    
                     return `
-                        <div class="flex items-start py-2 border-b border-slate-200 last:border-b-0">
+                        <div class="flex items-start py-3 border-b border-slate-200 last:border-b-0">
                             <svg class="h-5 w-5 text-red-500 mr-3 flex-shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
                                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
                             </svg>
                             <div class="flex-1">
                                 <div class="text-sm font-medium text-slate-900">${escapeHtml(testName)}</div>
-                                ${status.error ? `<div class="mt-1 text-sm text-red-600 font-mono">${escapeHtml(status.error)}</div>` : ''}
+                                ${detailsHtml}
                             </div>
                         </div>
                     `;
@@ -318,7 +411,8 @@
                 if (allTestCases.includes(test.name)) {
                     testStatuses[test.name] = {
                         passed: test.passed,
-                        error: test.error || null
+                        error: test.error || null,
+                        actual: test.actual || null
                     };
                 }
             });
@@ -335,7 +429,8 @@
                     if (allTestCases.includes(test.name)) {
                         testStatuses[test.name] = {
                             passed: test.passed,
-                            error: test.error || null
+                            error: test.error || null,
+                            actual: test.actual || null
                         };
                     }
                 });

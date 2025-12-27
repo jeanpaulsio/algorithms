@@ -304,11 +304,19 @@ def execute_code_secure(
                 indented_lines.append(line)
         indented_test_code = "\n".join(indented_lines)
         
+        # Store test code source for parsing
+        test_code_source = test_code
+        
         test_runner_content = f"""import sys
 from pathlib import Path
+import ast as ast_module
+import json
 
 # Add tmpdir to path
 sys.path.insert(0, r"{tmp_path}")
+
+# Store test code source for parsing actual values
+TEST_CODE_SOURCE = {repr(test_code_source)}
 
 # Execute test code to define test functions
 try:
@@ -333,6 +341,79 @@ print(f"Found {{len(test_functions)}} test(s)")
 failed_tests = []
 passed_tests = []
 
+def extract_actual_value(test_name, test_func):
+    \"\"\"Extract actual value from a failed assertion by parsing test code and re-evaluating.\"\"\"
+    try:
+        # Parse the test code source to find the test function
+        tree = ast_module.parse(TEST_CODE_SOURCE)
+        for node in ast_module.walk(tree):
+            if isinstance(node, ast_module.FunctionDef) and node.name == test_name:
+                # Found the test function, look for assert statements
+                for stmt in ast_module.walk(node):
+                    if isinstance(stmt, ast_module.Assert):
+                        if isinstance(stmt.test, ast_module.Compare):
+                            # It's a comparison like func(args) == expected
+                            left = stmt.test.left
+                            if isinstance(left, ast_module.Call):
+                                # It's a function call
+                                func_name = left.func.id if isinstance(left.func, ast_module.Name) else None
+                                if func_name:
+                                    # Try to find the function in globals
+                                    func = None
+                                    if func_name in globals():
+                                        func = globals()[func_name]
+                                    
+                                    if func and callable(func):
+                                        # Evaluate the function call to get actual result
+                                        try:
+                                            args = []
+                                            for arg_node in left.args:
+                                                try:
+                                                    # Try to evaluate the argument using AST
+                                                    code = ast_module.Expression(arg_node)
+                                                    compiled = compile(code, "<string>", "eval")
+                                                    args.append(eval(compiled))
+                                                except Exception:
+                                                    # If AST evaluation fails, try constant extraction
+                                                    try:
+                                                        if isinstance(arg_node, ast_module.Constant):
+                                                            args.append(arg_node.value)
+                                                        elif isinstance(arg_node, ast_module.List):
+                                                            list_vals = []
+                                                            for elem in arg_node.elts:
+                                                                try:
+                                                                    if isinstance(elem, ast_module.Constant):
+                                                                        list_vals.append(elem.value)
+                                                                    else:
+                                                                        elem_code = ast_module.Expression(elem)
+                                                                        elem_compiled = compile(elem_code, "<string>", "eval")
+                                                                        list_vals.append(eval(elem_compiled))
+                                                                except:
+                                                                    pass
+                                                            args.append(list_vals)
+                                                        else:
+                                                            # Last resort: try to unparse and eval
+                                                            if hasattr(ast_module, 'unparse'):
+                                                                code_str = ast_module.unparse(arg_node)
+                                                                args.append(eval(code_str))
+                                                    except Exception:
+                                                        pass
+                                            
+                                            if len(args) == len(left.args):  # Only proceed if we got all args
+                                                # Call the function
+                                                actual_result = func(*args)
+                                                # Format the result
+                                                try:
+                                                    return json.dumps(actual_result) if isinstance(actual_result, (list, dict)) else repr(actual_result)
+                                                except:
+                                                    return repr(actual_result)
+                                        except Exception:
+                                            pass
+                break  # Found the function, no need to continue
+    except Exception:
+        pass
+    return None
+
 for test_name in sorted(test_functions):
     try:
         test_func = globals()[test_name]
@@ -341,7 +422,14 @@ for test_name in sorted(test_functions):
         passed_tests.append(test_name)
     except AssertionError as e:
         error_msg = str(e) if str(e) else "Assertion failed"
+        # Try to extract actual value by re-evaluating the assertion
+        actual_value = extract_actual_value(test_name, test_func)
+        
         print(f"FAILED: {{test_name}} - {{error_msg}}")
+        if actual_value:
+            # Clean up the actual value - remove quotes if present
+            actual_value_clean = actual_value.strip('"').strip("'")
+            print(f"ACTUAL_VALUE: {{test_name}} - {{actual_value_clean}}")
         failed_tests.append(test_name)
     except Exception as e:
         # Extract the most relevant error message
@@ -427,7 +515,19 @@ else:
                     # Clean up error message - remove any traceback-like content
                     error_msg = error_msg.split("\n")[0].split("Traceback")[0].strip()
                     failed_tests.append(test_name)
-                    test_results.append({"name": test_name, "passed": False, "error": error_msg})
+                    test_result = {"name": test_name, "passed": False, "error": error_msg, "actual": None}
+                    test_results.append(test_result)
+                elif line.startswith("ACTUAL_VALUE:"):
+                    # Extract actual value from test output
+                    parts = line.replace("ACTUAL_VALUE:", "").strip().split(" - ", 1)
+                    if len(parts) == 2:
+                        test_name = parts[0].strip()
+                        actual_value = parts[1].strip()
+                        # Find the corresponding test result and update it
+                        for result in test_results:
+                            if result["name"] == test_name:
+                                result["actual"] = actual_value
+                                break
                 elif line.startswith("ERROR in"):
                     # Extract test name and error message
                     parts = line.replace("ERROR in", "").strip().split(":", 1)
