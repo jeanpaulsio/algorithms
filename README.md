@@ -7,31 +7,28 @@ An algorithm practice application built with FastAPI.
 ### Prerequisites
 
 - Python 3.13.3 (managed via `.tool-versions` if using asdf)
-- pip
+- Poetry
 - Node.js and yarn (for Tailwind CSS)
 
 ### Setup
 
-1. Create a virtual environment:
+1. Install Poetry (if not already installed):
 ```bash
-python -m venv .venv
+curl -sSL https://install.python-poetry.org | python3 -
 ```
 
-2. Activate the virtual environment:
+2. Install Python dependencies:
 ```bash
-source .venv/bin/activate
+poetry install
 ```
 
-3. Install Python dependencies:
-```bash
-pip install -r requirements.txt
-```
-
-4. Install Node.js dependencies and build Tailwind CSS:
+3. Install Node.js dependencies and build Tailwind CSS:
 ```bash
 yarn install
 yarn build:css
 ```
+
+**Note:** Poetry manages its own virtual environment automatically. The `Procfile.dev` uses `poetry run`, so you don't need to activate the environment manually.
 
 ### Running the Application
 
@@ -44,7 +41,21 @@ The application will be available at `http://localhost:8000`
 
 ### Updating Dependencies
 
-If you modify `pyproject.toml`, regenerate `requirements.txt`:
+**Add a dependency:**
 ```bash
-pip-compile pyproject.toml -o requirements.txt
+poetry add package-name
+```
+
+**Add a dev dependency:**
+```bash
+poetry add --group dev package-name
+```
+
+**Update dependencies:**
+```bash
+poetry update
+```
+
+```bash
+poetry export -f requirements.txt --output requirements.txt --without-hashes
 ```
