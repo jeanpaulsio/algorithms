@@ -42,3 +42,11 @@ htmlcov/
 
 # ruff cache
 .ruff_cache/
+
+# Node.js
+node_modules/
+package-lock.json
+yarn-error.log
+
+# Built CSS (generated automatically on Heroku)
+app/static/dist/output.css
