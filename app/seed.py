@@ -1,20 +1,19 @@
-import asyncio
 import sys
-from app.database import async_session_maker
+from app.database import SessionLocal
 from app.models import Problem
 from sqlalchemy import select, delete
 
 
-async def seed_problems(clear_existing: bool = False):
-    async with async_session_maker() as session:
+def seed_problems(clear_existing: bool = False):
+    db = SessionLocal()
+    try:
         if clear_existing:
-            await session.execute(delete(Problem))
-            await session.commit()
+            db.execute(delete(Problem))
+            db.commit()
             print("Cleared existing problems")
 
         # Check if problems already exist
-        result = await session.execute(select(Problem))
-        existing = result.scalar_one_or_none()
+        existing = db.scalar(select(Problem))
         if existing and not clear_existing:
             print("Problems already seeded. Use --clear to reseed.")
             return
@@ -66,11 +65,13 @@ def test_mixed_numbers():
 """,
         )
 
-        session.add(problem)
-        await session.commit()
+        db.add(problem)
+        db.commit()
         print(f"Seeded problem: {problem.title}")
+    finally:
+        db.close()
 
 
 if __name__ == "__main__":
     clear = "--clear" in sys.argv or "-c" in sys.argv
-    asyncio.run(seed_problems(clear_existing=clear))
+    seed_problems(clear_existing=clear)

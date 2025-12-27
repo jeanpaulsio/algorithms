@@ -24,5 +24,3 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.add_column("problems", sa.Column("module_path", sa.String(), nullable=False, server_default=""))
-
-
